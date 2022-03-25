@@ -80,6 +80,7 @@ while True:
     #   zoom_state = 0
     #if cv2.waitKey(1)==ord('q'):
     #    break
+    
     if key==ord('m'):#zoom in:
        if zoom_factor >= 8:
          zoom_factor = 8.0
