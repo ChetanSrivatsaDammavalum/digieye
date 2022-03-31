@@ -64,8 +64,8 @@ for fname in images:
     mtx[1,2] = h //2
 
     newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
-    #dst = cv2.undistort(img, mtx, dist, None, mtx)
     dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    #dst = cv2.undistort(img, mtx, dist, None, mtx)
     end = time.time()
     time_of_distortion = start - end
     #img = cv2.resize(gray,(dispW//2,dispH),interpolation = cv2.INTER_LINEAR)
