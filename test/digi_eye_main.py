@@ -254,6 +254,8 @@ while True:
       camera_B = frame[ : split_len , : ]
       camera_B = cv.flip(camera_B, -1)
       camera_B_h, camera_B_w = camera_B.shape[:2]
+    camera_A_original = camera_A
+    camera_B_original = camera_B
 
     # Image zoom in/out
     zoom_factor = round(zoom_factor,1)

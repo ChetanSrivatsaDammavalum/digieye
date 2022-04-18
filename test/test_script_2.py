@@ -22,7 +22,8 @@ flip=2
 #camSet='nvarguscamerasrc !  video/x-raw(memory:NVMM), width=1920, height=1080, format=NV12, framerate=30/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink'
 
 camSet='nvarguscamerasrc !  video/x-raw(memory:NVMM), width=3264, height=2464, format=NV12, framerate=21/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink'
-cam=cv2.VideoCapture(camSet)
+# cam=cv2.VideoCapture(camSet)
+cam=cv2.VideoCapture(0)
 
 #def zoom(img, zoom_factor):
 #    return cv2.resize(img, None, fx=zoom_factor, fy=zoom_factor)

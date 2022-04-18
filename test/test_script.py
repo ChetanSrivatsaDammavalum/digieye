@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 import time
+import math
 print(cv.__version__)
 
 font = cv.FONT_HERSHEY_SIMPLEX
@@ -36,6 +37,7 @@ flip=3
 camSet='nvarguscamerasrc !  video/x-raw(memory:NVMM), width=3264, height=1848, format=NV12, framerate=28/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink'
 #camSet='nvarguscamerasrc !  video/x-raw(memory:NVMM), width=3264, height=2464, format=NV12, framerate=21/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! vaapipostproc ! video/x-raw, denoise = 5 ! videoconvert ! video/x-raw, format=BGR ! appsink'
 cam= cv.VideoCapture(camSet)
+
 
 # distortion parameters
 mtx = np.array([[ 1.70000000e+06, 0.00000000e+00, 0.00000000e+00 ],[ 0.00000000e+00, 1.70000000e+06, 0.00000000e+00 ],[ 0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
@@ -102,6 +104,7 @@ def apply_brightness_contrast(cam_img, brightness = 0, contrast = 0):
     img_bnc = cv.addWeighted(img_bnc, alpha_c, img_bnc, 0, gamma_c)
 
   return img_bnc
+
 ######################################################################################
 
 zoom_factor = 1.0
@@ -196,7 +199,7 @@ while True:
       camera_B_edges = cv.addWeighted(camera_B, 1, edges_camera_B, 0.4, 1.2 )
       camera_A = camera_A_edges
       camera_B = camera_B_edges
-     
+
     #############################radial distortion######################################
     
     camera_A = apply_radial_distortion(camera_A, mtx, dist)
