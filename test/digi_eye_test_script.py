@@ -1,7 +1,8 @@
 import cv2 as cv
 import numpy as np
 from threading import Thread
-from multiprocessing import Process, Queue
+#from multiprocessing import Process, Queue
+import multiprocessing as mp
 import time
 import math
 import easyocr
@@ -91,7 +92,10 @@ class VideoStreamWidget(object):
     # key = cv.waitKey(1)
     if key == ord('q'):
       self.capture.release()
+      #if self.thread.is_alive():
+      #  self.thread.join()
       cv.destroyAllWindows()
+      #self.thread.join()
       exit(1)
 
 #-----------------------------------------------------
@@ -204,7 +208,7 @@ def apply_brightness_contrast(cam_img, brightness = 0, contrast = 0):
 # Bubble magnification
 #------------------------------------------------------
 
-def bubble(cam_img, radius, scale, amount):
+def bubble(cam_img, radius= 400, scale =2, amount =-2):
   # grab the dimensions of the image
   h, w = cam_img.shape[:2]
   center_y = h//2
@@ -379,8 +383,17 @@ if __name__ == '__main__':
       
       elif mode_select == 7:
         mode_name = 'bubble'
-        camera_A = bubble(camera_A, 400, 2, -2)
-        camera_B = bubble(camera_B, 400, 2, -2) 
+        # camera_A = bubble(camera_A, 400, 2, -2)
+        # camera_B = bubble(camera_B, 400, 2, -2) 
+        img_pair = [camera_A, camera_B]
+        pool = mp.Pool(2)
+        # img_p = pool.map(ocr_img, img_pair)
+        bubble_pair = pool.map(bubble, img_pair)
+        pool.close()
+        pool.join()
+    
+        camera_A = bubble_pair[0]
+        camera_B = bubble_pair[1]
 
       elif mode_select == 8:
         mode_name = 'ocr'
@@ -471,7 +484,7 @@ if __name__ == '__main__':
         else:  
           zoom_factor = zoom_factor - 0.2
       if key==ord('x'):#mode change:+
-        if mode_select == 8:
+        if mode_select == 7:
           mode_select = 0
         else:  
           mode_select +=1 #

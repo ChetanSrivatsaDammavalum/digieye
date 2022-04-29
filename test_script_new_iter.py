@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 import time
+import math
 from threading import Thread
 import multiprocessing as mp
 import easyocr
@@ -93,6 +94,41 @@ def ocr_img(cam_img):
   #  return 0
 
 #-----------------------------------------------------------------
+# bubble function
+
+def bubble(cam_img, radius= 400, scale =2, amount =-2):
+  # grab the dimensions of the image
+  h, w = cam_img.shape[:2]
+  center_y = h//2
+  center_x = w//2
+
+  # set up the x and y maps as float32
+  flex_x = np.zeros((h, w), np.float32)
+  flex_y = np.zeros((h, w), np.float32)
+
+  # create map with the barrel pincushion distortion formula
+  for y in range(h):
+      delta_y = scale * (y - center_y)
+      for x in range(w):
+          # determine if pixel is within an ellipse
+          delta_x = scale * (x - center_x)
+          distance = delta_x * delta_x + delta_y * delta_y
+          if distance >= (radius * radius):
+              flex_x[y, x] = x
+              flex_y[y, x] = y
+          else:
+              factor = 1.0
+              if distance > 0.0:
+                  # factor = math.pow(math.sin(math.pi * math.sqrt(distance) / radius / 2), -amount)
+                  factor = math.pow( math.sqrt(distance) / radius , -amount/2 )
+              flex_x[y, x] = factor * delta_x / scale + center_x
+              flex_y[y, x] = factor * delta_y / scale + center_y
+
+  # do the remap  this is where the magic happens
+  return cv.remap(cam_img, flex_x, flex_y, cv.INTER_LANCZOS4) 
+
+
+#-----------------------------------------------------------------
 # multiprocessig function
 
 def process_images(images):
@@ -105,8 +141,9 @@ def process_images(images):
 # main code
 if __name__ == '__main__':
   video_stream_widget = VideoStreamWidget()
-  
+ 
   mp.set_start_method('spawn')
+  pool = mp.Pool(2)
 
   while True:
     start = time.time()
@@ -126,32 +163,41 @@ if __name__ == '__main__':
     camera_B_w = camera_B.shape[1] 
 
     #---------------------------------------------------------
-    # main process
-    img_pair = [camera_A, camera_B]
+    # main process 
+
+    #img_pair = [camera_A, camera_B]
+
+    # ocr    
+    #---------------------------------------------------------
+    #pool = mp.Pool(2)
+    #line_pos = pool.map(ocr_img, img_pair)
+    #pool.close()
+    #pool.join()
     
-    pool = mp.Pool(2)
-    # img_p = pool.map(ocr_img, img_pair)
-    line_pos = pool.map(ocr_img, img_pair)
+    #camera_A = draw_boxes(camera_A, line_pos[0])
+    #camera_B = draw_boxes(camera_B, line_pos[1])
+    #---------------------------------------------------------
+    # declare global empty bboxA and B( outside loop)
+    #if no sub process are active
+    # if queue is empty
+    img_pair = [camera_A, camera_B]
+    line_pos = pool.map(ocr_img, img_pair)# add bboxA and B to QueueA and B 
+    # else
+    # get bboxA and B from QueueA and B, # set QueueA and B to empty
     pool.close()
     pool.join()
-    
+
     camera_A = draw_boxes(camera_A, line_pos[0])
     camera_B = draw_boxes(camera_B, line_pos[1])
 
-    #cv.imshow('img_pair_1', img_p[1])
-    #cv.imshow('img_pair_0', img_p[0])
-
-    
-    #camera_A = ocr_img(camera_A)
-    #camera_B = ocr_img(camera_B)
 
     #---------------------------------------------------------
     # post processing
 
     end = time.time()
     time_elapsed = end - start
-    fps = 1 // time_elapsed
-
+    # fps = 1 // time_elapsed
+    fps = time_elapsed
     cv.putText(camera_A,'fps:' + str(fps),(300,30),font,1,(255,0,0),1,cv.LINE_AA)
     cv.putText(camera_B,'fps:' + str(fps),(300,30),font,1,(255,0,0),1,cv.LINE_AA)
     
