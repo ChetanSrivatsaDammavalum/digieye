@@ -86,6 +86,10 @@ def ocr_img(cam_img):
   bounds = reader.readtext(cam_img)
   print('bounds calculated',bounds)
   return bounds
+  #if bounds:
+  #  return bounds
+  #else: 
+  #  return [[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)],[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)]]
   # if bounds:
     # return draw_boxes(cam_img, bounds)
     # return bounds
@@ -140,10 +144,15 @@ def process_images(images):
 #-----------------------------------------------------------------
 # main code
 if __name__ == '__main__':
+  ocr_first_call = 1
+  
+  #line_pos= [[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)],[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)]]
+  line_pose = [[],[]]
   video_stream_widget = VideoStreamWidget()
  
   mp.set_start_method('spawn')
   pool = mp.Pool(2)
+   
 
   while True:
     start = time.time()
@@ -165,30 +174,41 @@ if __name__ == '__main__':
     #---------------------------------------------------------
     # main process 
 
-    #img_pair = [camera_A, camera_B]
+    img_pair = [camera_A, camera_B]
+
+    # bubble      line_pos= [[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)],[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)]]
+    #---------------------------------------------------------
+
+    #bubble_pair = pool.map(bubble, img_pair)
+    #camera_A = bubble_pair[0]
+    #camera_B = bubble_pair[1]
+    
+    #---------------------------------------------------------
 
     # ocr    
     #---------------------------------------------------------
-    #pool = mp.Pool(2)
-    #line_pos = pool.map(ocr_img, img_pair)
-    #pool.close()
-    #pool.join()
-    
-    #camera_A = draw_boxes(camera_A, line_pos[0])
-    #camera_B = draw_boxes(camera_B, line_pos[1])
-    #---------------------------------------------------------
-    # declare global empty bboxA and B( outside loop)
-    #if no sub process are active
-    # if queue is empty
-    img_pair = [camera_A, camera_B]
-    line_pos = pool.map(ocr_img, img_pair)# add bboxA and B to QueueA and B 
-    # else
-    # get bboxA and B from QueueA and B, # set QueueA and B to empty
-    pool.close()
-    pool.join()
-
+    line_pos = pool.map(ocr_img, img_pair)
     camera_A = draw_boxes(camera_A, line_pos[0])
     camera_B = draw_boxes(camera_B, line_pos[1])
+    #---------------------------------------------------------
+    #if ocr_first_call == 1:
+    #  line_pos= [[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)],[([[0, 0], [0, 0], [0, 0], [0, 0]], '', 0.0)]]
+    #  line_pose = [[],[]]
+    #  ocr_result = pool.map(ocr_img, img_pair)# add bboxA and B to QueueA and B 
+    #  ocr_first_call = 0
+    # declare global empty bboxA and B( outside loop) [done]
+    
+    #if no sub process are active
+    # if queue is empty
+    #img_pair = [camera_A, camera_B]
+    #line_pos = pool.map(ocr_img, img_pair)# add bboxA and B to QueueA and B 
+    # else
+    # get bboxA and B from QueueA and B, # set QueueA and B to empty
+
+    #camera_A = draw_boxes(camera_A, line_pos[0])
+    #camera_B = draw_boxes(camera_B, line_pos[1])
+
+    # *** if mode changed, call a reset function which clears queue, set ocr_first_call flag to 1
 
 
     #---------------------------------------------------------
@@ -204,6 +224,10 @@ if __name__ == '__main__':
     new_frame = np.concatenate((camera_A,camera_B),axis=1)
     
     key = cv.waitKey(1)
+    if key == ord('q'):
+      pool.close()
+      pool.join()
+    
     video_stream_widget.show_frame(new_frame,key)
     
 

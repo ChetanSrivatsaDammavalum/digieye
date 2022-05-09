@@ -179,6 +179,7 @@ def draw_boxes(image, bounds, color='blue', width=1):
 
 # def ocr_img(q, cam_img):
 def ocr_img(cam_img):
+  print(' ocr process called')
   bounds = reader.readtext(cam_img)
   if bounds:
     # q.put(bounds)

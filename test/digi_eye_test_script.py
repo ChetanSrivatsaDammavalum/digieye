@@ -93,7 +93,8 @@ class VideoStreamWidget(object):
     if key == ord('q'):
       self.capture.release()
       #if self.thread.is_alive():
-      #  self.thread.join()
+      #self.thread.join()
+      time.sleep(1)
       cv.destroyAllWindows()
       #self.thread.join()
       exit(1)
@@ -280,6 +281,7 @@ dist = np.array([[ 1.70000000e+06 , 1.00000000e+05 , 0.00000000e+00, 0.00000000e
 pos = 0
 if __name__ == '__main__':
   video_stream_widget = VideoStreamWidget()
+  pool = mp.Pool(2)
   while True:
       #--------------------
       #normal sequential capture method
@@ -386,11 +388,11 @@ if __name__ == '__main__':
         # camera_A = bubble(camera_A, 400, 2, -2)
         # camera_B = bubble(camera_B, 400, 2, -2) 
         img_pair = [camera_A, camera_B]
-        pool = mp.Pool(2)
+        #pool = mp.Pool(2)
         # img_p = pool.map(ocr_img, img_pair)
         bubble_pair = pool.map(bubble, img_pair)
-        pool.close()
-        pool.join()
+        #pool.close()
+        #pool.join()
     
         camera_A = bubble_pair[0]
         camera_B = bubble_pair[1]
@@ -461,7 +463,14 @@ if __name__ == '__main__':
       #-------------------------------------------User Input-----------------------------------------
       #**********need to optimize***********
       key = cv.waitKey(1)
+      if key == ord('q'):
+        pool.close()
+        #pool.terminate()
+        pool.join()
+        time.sleep(1)
       video_stream_widget.show_frame(new_frame,key)
+        
+        
       # brightness and contrast controls
       if key==ord('w'):
         b+=10
