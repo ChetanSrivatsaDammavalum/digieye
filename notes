@@ -1,0 +1,6 @@
+
+# Running a python script from another file 
+# note: put the file in the same directory of your main python file.
+
+import os 
+os.system('python file.py') 
