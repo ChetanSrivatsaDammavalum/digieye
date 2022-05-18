@@ -14,19 +14,24 @@ import RPi.GPIO as GPIO
 import time
 import os
 
-# Pin Definitons:
+# Pin Definitons: 13, 15,19,21,23 - new pin list
 #led_pin = 12  # Board pin 12
-but_pin_blue = 21  # Board pin 21
-but_pin_green = 18  # Board pin 18
-but_pin_yellow = 15  # Board pin 15
+but_pin_13 = 13  # Board pin 13
+but_pin_15 = 15  # Board pin 15
+but_pin_19 = 19  # Board pin 1119
+but_pin_19 = 21
+but_pin_19 = 23
+
 
 def main():
     # Pin Setup:
     GPIO.setmode(GPIO.BOARD)  # BOARD pin-numbering scheme
     #GPIO.setup(led_pin, GPIO.OUT)  # LED pin set as output
-    GPIO.setup(but_pin_blue, GPIO.IN)  # button pin set as input
-    GPIO.setup(but_pin_green, GPIO.IN)  # button pin set as input
-    GPIO.setup(but_pin_yellow, GPIO.IN)  # button pin set as input
+    GPIO.setup(but_pin_13, GPIO.IN)  # button pin set as input
+    GPIO.setup(but_pin_15, GPIO.IN)  # button pin set as input
+    GPIO.setup(but_pin_19, GPIO.IN)  # button pin set as input
+    GPIO.setup(but_pin_21, GPIO.IN)  # button pin set as input
+    GPIO.setup(but_pin_23, GPIO.IN)  # button pin set as input
 
     # Initial state for LEDs:
     #GPIO.output(led_pin, GPIO.LOW)
@@ -39,19 +44,26 @@ def main():
     try:
         while True:
 
-            button_blue = GPIO.input(but_pin_blue)
-            button_green = GPIO.input(but_pin_green) 
-            button_yellow = GPIO.input(but_pin_yellow) 
+            button_plus = GPIO.input(but_pin_13)
+            button_minus = GPIO.input(but_pin_15) 
+            button_mode = GPIO.input(but_pin_19) 
+            button_submode = GPIO.input(but_pin_21) 
+            button_shutdown = GPIO.input(but_pin_23) 
             
-            if button_blue == 0 :
-                print("Blue Button Pressed!") 
-            if button_green == 0 :
-                print("Green Button Pressed!") 
-            if button_yellow == 0 :
-                print("Yellow Button Pressed!") 
-                print("Requested for shutdown")
-                time.sleep(0.2)
-
+            if
+             button_plus == 0 :
+                print(" (+) Pressed!") 
+            if button_minus == 0 :
+                print(" (-) Pressed!") 
+            if button_mode == 0 :
+                print(" (M) Pressed!") 
+            if button_submode == 0 :
+                print(" (M) Pressed!") 
+            if button_shutdown == 1 :
+                print(" (P) Pressed!") 
+                print("Shutdown initiated")
+                time.sleep(2)
+                print("SYSTEM SHUTDOWN")
                 break
             time.sleep(0.2)
     finally:
