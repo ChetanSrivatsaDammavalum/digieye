@@ -14,13 +14,14 @@ import RPi.GPIO as GPIO
 import time
 import os
 
-# Pin Definitons:
+# Pin Definitons: 13, 15,19,21,23 - new pin list
 #led_pin = 12  # Board pin 12
 but_pin_13 = 13  # Board pin 13
 but_pin_15= 15  # Board pin 15
 but_pin_19 = 19  # Board pin 19
 but_pin_21 = 21  # Board pin 21
 but_pin_23 = 23  # Board pin 23
+
 
 def main():
     # Pin Setup:
@@ -29,9 +30,8 @@ def main():
     GPIO.setup(but_pin_13, GPIO.IN)  # button pin set as input
     GPIO.setup(but_pin_15, GPIO.IN)  # button pin set as input
     GPIO.setup(but_pin_19, GPIO.IN)  # button pin set as input
-    GPIO.setup(but_pin_21, GPIO.IN) 
-    GPIO.setup(but_pin_23, GPIO.IN) 
-    
+    GPIO.setup(but_pin_21, GPIO.IN)  # button pin set as input
+    GPIO.setup(but_pin_23, GPIO.IN)  # button pin set as input
     # Initial state for LEDs:
     #GPIO.output(led_pin, GPIO.LOW)
     prev_value = None
@@ -63,6 +63,7 @@ def main():
                 time.sleep(2)
                 print("SHUTDOWN INITIATED")
                 time.sleep(0.2)
+
                 break
             time.sleep(0.2)
     finally:

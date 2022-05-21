@@ -136,11 +136,15 @@ def edge_image(cam_img):
 # Bubble magnification
 #------------------------------------------------------
 
-def bubble(cam_img, radius= 400, scale =2, amount =-2):
+def bubble(cam_img, radius= 0.5, scale =1 , amount =8):
   # grab the dimensions of the image
   h, w = cam_img.shape[:2]
   center_y = h//2
   center_x = w//2
+
+  radius = int(radius*h)
+  scale_a = 0.6
+  scale_b = 2
 
   # set up the x and y maps as float32
   flex_x = np.zeros((h, w), np.float32)
@@ -148,10 +152,10 @@ def bubble(cam_img, radius= 400, scale =2, amount =-2):
 
   # create map with the barrel pincushion distortion formula
   for y in range(h):
-      delta_y = scale * (y - center_y)
+      delta_y = (y - center_y)
       for x in range(w):
           # determine if pixel is within an ellipse
-          delta_x = scale * (x - center_x)
+          delta_x = (x - center_x)
           distance = delta_x * delta_x + delta_y * delta_y
           if distance >= (radius * radius):
               flex_x[y, x] = x
@@ -159,11 +163,20 @@ def bubble(cam_img, radius= 400, scale =2, amount =-2):
           else:
               factor = 1.0
               if distance > 0.0:
-                  # factor = math.pow(math.sin(math.pi * math.sqrt(distance) / radius / 2), -amount)
-                  factor = math.pow( math.sqrt(distance) / radius , -amount/2 )
+              #if distance > (0.2*h):
+                  #distance = distance * scale_a * scale_a
+                  factor = math.pow(math.sin(math.pi * math.sqrt(distance) / radius / 2), amount)
+                  #factor = math.pow( math.sqrt(distance) / radius , -amount/2 )
+                  #scale = scale_a 
+              #else: 
+                  #distance = distance * scale_b * scale_b
+                  #factor = math.pow(math.sin(math.pi * math.sqrt(distance) / radius / 2), amount)
+                  #scale = scale_b
               flex_x[y, x] = factor * delta_x / scale + center_x
               flex_y[y, x] = factor * delta_y / scale + center_y
 
+  cam_img = cv.line(cam_img,(int(0.3*w),int(0.45*h)),(int(0.7*w),int(0.45*h)),(0,255,0),2)
+  cam_img = cv.line(cam_img,(int(0.3*w),int(0.55*h)),(int(0.7*w),int(0.55*h)),(0,255,0),2)
   # do the remap  this is where the magic happens
   return cv.remap(cam_img, flex_x, flex_y, cv.INTER_LANCZOS4) 
 
