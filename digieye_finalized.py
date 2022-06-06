@@ -603,6 +603,32 @@ def puttext_img(cam_img, frame_h, frame_w, mode_name, sub_mode, fps, zoom_factor
 # Image Distortion 
 #------------------------------------------------------
 
+#***********************TEST FUNCTION FOR DISTORTION
+def dist_map(cam_img, bulge = 0.02, scale = 0.1 ):#for sin fn
+  # grab the dimensions of the image
+  h, w = cam_img.shape[:2]
+  center_y = h//2
+  center_x = w//2
+
+  # set up the x and y maps as float32
+  dist_x = np.zeros((h, w), np.float32)
+  dist_y = np.zeros((h, w), np.float32)
+
+  # create map with the barrel pincushion distortion formula
+  for y in range(h):
+    delta_y = scale *(y - center_y)
+    for x in range(w):
+      delta_x = scale *(x - center_x)
+      dist = (delta_y * delta_y) + (delta_x * delta_x)
+      dist_x[y, x] = math.pow( dist , bulge) * delta_x / scale  + center_x
+      dist_y[y, x] = math.pow( dist , bulge) * delta_y / scale  + center_y
+
+  return dist_x, dist_y
+
+def map_radial_distortion(cam_img, dist_x, dist_y):#for sin fn
+  return cv.remap(cam_img, dist_x, dist_y, cv.INTER_LINEAR)
+
+#***************MAIN FUNCTION FOR DISTORTION***************************
 def apply_radial_distortion(cam_img, camera_mtx, distortion_mtx):
   #Function to introduce barrel distortion to the input image  
 
@@ -613,6 +639,9 @@ def apply_radial_distortion(cam_img, camera_mtx, distortion_mtx):
   img_dist = cv.undistort(cam_img, camera_mtx, distortion_mtx, None, newcameramtx)
   
   return img_dist
+
+
+
 
 #------------------------------------------------------
 # Parameters
@@ -638,6 +667,10 @@ mode_name = 'Norm'
 mtx = np.array([[ 1.70000000e+06, 0.00000000e+00, 0.00000000e+00 ],[ 0.00000000e+00, 1.70000000e+06, 0.00000000e+00 ],[ 0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
 dist = np.array([[ 1.70000000e+06 , 1.00000000e+05 , 0.00000000e+00, 0.00000000e+00, 1.00000000e+04 ]])
 pos = 3
+distort_img = True
+
+dist_x = []
+dist_y = []
 
 # bubble mapping parameters
 flex_x = []
@@ -654,6 +687,7 @@ display_mode = 0
 primary_eye = 'right'
 
 first_run = True
+fps_all = 0
 
 if __name__ == '__main__':
 
@@ -690,6 +724,7 @@ if __name__ == '__main__':
       # call remap function for bubble
       if first_run:
         flex_x , flex_y = bubble_map(camera_A)
+        dist_x, dist_y = dist_map(camera_A)
         first_run = False
 
       # Brightness and contrast functions
@@ -713,6 +748,7 @@ if __name__ == '__main__':
         # call remap function for bubble
         if first_run:
           flex_x , flex_y = bubble_map(camera_A)
+          dist_x, dist_y = dist_map(camera_A)
           first_run = False
         
         camera_A = apply_brightness_contrast(camera_A,brightness,contrast, gamma_table)
@@ -735,6 +771,7 @@ if __name__ == '__main__':
         # call remap function for bubble
         if first_run:
           flex_x , flex_y = bubble_map(camera_B)
+          dist_x, dist_y = dist_map(camera_A)
           first_run = False
         
         camera_B = apply_brightness_contrast(camera_B,brightness,contrast, gamma_table)
@@ -774,12 +811,23 @@ if __name__ == '__main__':
     camera_B = img_border(camera_B)
     frame_A_h, frame_A_w = camera_A.shape[:2]
     frame_B_h, frame_B_w = camera_B.shape[:2]
-    camera_A = puttext_img(camera_A, frame_A_h, frame_A_w, mode_name, sub_mode, fps, zoom_factor, brightness, contrast, ipd)
-    camera_B = puttext_img(camera_B, frame_B_h, frame_B_w, mode_name, sub_mode, fps, zoom_factor, brightness, contrast, ipd)
+    camera_A = puttext_img(camera_A, frame_A_h, frame_A_w, mode_name, sub_mode, fps_all, zoom_factor, brightness, contrast, ipd)
+    camera_B = puttext_img(camera_B, frame_B_h, frame_B_w, mode_name, sub_mode, fps_all, zoom_factor, brightness, contrast, ipd)
+
+    end_text = time.time()
+    time_elapsed_text = end_text - start
+    fps_text = 1 // time_elapsed_text
     
     # Apply radial distortion on image
-    camera_A = apply_radial_distortion(camera_A, mtx, dist)
-    camera_B = apply_radial_distortion(camera_B, mtx, dist)
+    if distort_img == True:
+      camera_A = apply_radial_distortion(camera_A, mtx, dist)
+      camera_B = apply_radial_distortion(camera_B, mtx, dist)
+    #camera_A = map_radial_distortion(camera_A, dist_x, dist_y)
+    #camera_B = map_radial_distortion(camera_B, dist_x, dist_y)
+
+    end_dist = time.time()
+    time_elapsed_dist = end_dist - start
+    fps_dist = 1 // time_elapsed_dist
       
     #fill image background
     fill_A = np.zeros([camera_A_h, camera_A_w, 3], dtype = np.uint8)
@@ -788,20 +836,38 @@ if __name__ == '__main__':
     fill_B  [ 5 : int(eyebox_h + 5) , int(camera_B_w//2 - int(eyebox_w//2)) : int(camera_B_w//2 + int(eyebox_w//2)) ] = camera_B
    
     new_frame = np.concatenate((fill_A,fill_B),axis=0)
-   
+    #new_frame = np.concatenate((camera_A,camera_B),axis=0)
+    
+
+    # fps calculation
+    end_all = time.time()
+    time_elapsed_all = end_all - start
+    fps_all = 1 // time_elapsed_all
+    print('image process fps: ',fps,' text process fps: ',fps_text, ' radial distortion process fps: ', fps_dist, ' display process fps: ',fps_all)
+    # image process fps:  42.0  text process fps:  13.0  radial distortion process fps:  3.0  display process fps:  3.0 <------with radial distortion
+    # image process fps:  29.0  text process fps:  11.0  radial distortion process fps:  11.0  display process fps:  10.0 <------without radial distortion
+
+    
     #-------------------------------------------User Input-----------------------------------------    
     
     key = cv.waitKey(1)
-    time.sleep(0.05)
+    time.sleep(0.02)
     
     if key == ord('q'):
-      pool.close()
-      pool.join()
+      #pool.close()
+      #pool.join()
+      print('Closing Program')
     video_stream_widget.show_frame(new_frame,key)
 
+    if key == ord('u'):
+      if distort_img == True:
+        distort_img = False
+      else:
+        distort_img = True      
+
     if button.pressed_shutdown:        
-      pool.close()
-      pool.join()
+      #pool.close()
+      #pool.join()
       key = 1
     video_stream_widget.show_frame(new_frame,key)
     
