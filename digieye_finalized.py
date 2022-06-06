@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Program to test gstreamer pipeline on simple opencv video capture with no threading
 import sys
+import os
 import cv2 as cv
 import time
 import numpy as np
@@ -17,19 +18,12 @@ but_pin_23 = 23  # Board pin 23
 
 GPIO.setmode(GPIO.BOARD)  # BOARD pin-numbering scheme
 
-#GPIO.setup(but_pin_13, GPIO.IN)  # button pin set as input
-#GPIO.setup(but_pin_15, GPIO.IN)  
-#GPIO.setup(but_pin_19, GPIO.IN)  
-#GPIO.setup(but_pin_21, GPIO.IN) 
-#GPIO.setup(but_pin_23, GPIO.IN) 
-
 flip=1
-#dispW=int(1080 * 0.5) 
-#dispH=int(2160 * 0.5)
 dispW=1080  
 dispH=2160 
-camSet='nvarguscamerasrc ! video/x-raw(memory:NVMM), width=3264, height=2464, format=NV12, framerate=21/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink'
-#capture = cv.VideoCapture(camSet, cv.CAP_GSTREAMER)
+#camSet='nvarguscamerasrc ! video/x-raw(memory:NVMM), width=3264, height=2464, format=NV12, framerate=21/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink'
+camSet='nvarguscamerasrc ! video/x-raw(memory:NVMM), width=3264, height=1848, format=NV12, framerate=28/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink'
+
 
 font = cv.FONT_HERSHEY_SIMPLEX
 
@@ -37,36 +31,6 @@ font = cv.FONT_HERSHEY_SIMPLEX
 # Threading class for video input and GPIO input
 #------------------------------------------------------
 #---------------------------------Threading GPIO feed--------------------------------
-    
-#class Button(object):
-#class Button(threading.Thread):
-#  def __init__(self, channel):
-#    self.channel = channel
-#    self._pressed = False
-#    self.pressed = False
-#    GPIO.setup(self.channel, GPIO.IN)
-    # Start the thread to read GPIO input from the user
-#    self.thread = Thread(target=self.run, args=())
-#    self.thread.daemon = True
-#    self.thread.start()
-    #threading.Thread.__init__(self)
-    #self.deamon = True
-    #self.start()
-
-#  def run(self):
-#    while 1:
-#      current = GPIO.input(self.channel)
-#      time.sleep(0.1)
-
-      #if current is False :
-#      if current == 1 :
-        #self._pressed = True
-#        self.pressed = True
-
-  
-#  def gpio_close(key):
-#    if key == ord('q') :
-#      GPIO.cleanup()
 
 class Button(object):
 #class Button(threading.Thread):
@@ -95,9 +59,6 @@ class Button(object):
     self.thread = Thread(target=self.run, args=())
     self.thread.daemon = True
     self.thread.start()
-    #threading.Thread.__init__(self)
-    #self.deamon = True
-    #self.start()
 
   def run(self):
     while 1:
@@ -109,11 +70,7 @@ class Button(object):
       current_shutdown = GPIO.input(self.channel_shutdown)
       time.sleep(0.02)
 
-      #if current is False :
-      #if current == 1 :
       if current_mode == 0 :
-        #self._pressed = True
-        #self.pressed = True
         self.pressed_mode = True
       else:
         self.pressed_mode = False
@@ -142,8 +99,6 @@ class Button(object):
     if key == ord('q') :
       GPIO.cleanup()
 
-
-
 #---------------------------------Threading Video feed--------------------------------
 
 class VideoStreamWidget(object):
@@ -167,49 +122,74 @@ class VideoStreamWidget(object):
 
   def show_frame(self, img, key):
     # Display frames in main program
-    cv.imshow('frame', img)
-    if key == 1 : 
-    #if key == ord('q') :
+    winname = "digieye"
+    cv.namedWindow(winname)        # Create a named window
+    cv.moveWindow(winname, 0,0)    # Move it to (0,0)
+    cv.imshow(winname, img)
+    #cv.imshow('frame', img)
+    if key == ord('q') :
       self.capture.release()
-      #GPIO.cleanup()
+      GPIO.cleanup()
       time.sleep(1)
       cv.destroyAllWindows()
+      exit(1)
+
+    if key == 1 : 
+      self.capture.release()
+      GPIO.cleanup()
+      time.sleep(1)
+      cv.destroyAllWindows()
+      os.system('shutdown -h now')
       exit(1)
 
 #------------------------------------------------------
 # Image magnification
 #------------------------------------------------------
-
+#<--------------------------------------------------------------------cuda added
 def zoom_image(cam_img, zoom_factor):
   h, w = cam_img.shape[:2]
   crop_w = w//zoom_factor
   crop_h = h//zoom_factor
   crop_img = cam_img[int(w // 2 - crop_w // 2):int( w // 2 + crop_w // 2), int(h // 2 - crop_h // 2):int(h // 2 + crop_h // 2)]
-  return cv.resize(crop_img,(w,h),interpolation = cv.INTER_LANCZOS4 )
+  return cv.resize(crop_img,(w,h),interpolation = cv.INTER_LINEAR )
+  #return cv.resize(crop_img,(w,h),interpolation = cv.INTER_LANCZOS4 )
+  # return cv2.cuda.resize(crop_img,(w,h),interpolation = cv.INTER_LANCZOS4)
 
 #------------------------------------------------------
 # Image de-glareing
 #------------------------------------------------------
-
+#************************************************************Need to improve- try cuda
 def remove_image_glare(cam_img):
   #Function to remove glare spots from image
 
   cam_img_hsv = cv.cvtColor(cam_img, cv.COLOR_BGR2HSV)
   h, s, v = cv.split(cam_img_hsv)
   ret,v = cv.threshold(v,180,255,cv.THRESH_TRUNC)
+  #v = cv.equalizeHist(v)
   img_glr = cv.merge((h,s,v))
   img_glr = cv.cvtColor(img_glr, cv.COLOR_HSV2BGR)
-  
   return img_glr
+
+def run_histogram_equalization(cam_img):
+  # convert from RGB color-space to YCrCb
+  ycrcb_img = cv2.cvtColor(cam_img, cv2.COLOR_BGR2YCrCb)
+
+  # equalize the histogram of the Y channel
+  ycrcb_img[:, :, 0] = cv.equalizeHist(ycrcb_img[:, :, 0])
+
+  # convert back to RGB color-space from YCrCb
+  # cam_img = cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
+  return cv2.cvtColor(ycrcb_img, cv.COLOR_YCrCb2BGR)
 
 #------------------------------------------------------
 # Image Brightness and Contrast control
 #------------------------------------------------------
 
-def apply_brightness_contrast(cam_img, brightness = 0, contrast = 0):
+def apply_brightness_contrast(cam_img, brightness, contrast, gamma_table):
   #Function to change the brightness and/or contrast of input image
   #---------Need to set limits and increamentsteps------- 
-  
+  #brightness = map(brightness, 0, 100, -255, 255)
+  #contrast = map(contrast, 0, 100, -127, 127)
   brightness = (brightness - 50) * 2
   contrast = (contrast*1.31) - 1.31 
 
@@ -234,21 +214,26 @@ def apply_brightness_contrast(cam_img, brightness = 0, contrast = 0):
     
     img_bnc = cv.addWeighted(img_bnc, alpha_c, img_bnc, 0, gamma_c)
 
-  return img_bnc
+  #+*******************************************************************************introduce gamma correction - check luminesence of image and use appropiate gamma  
+  #return img_bnc
+  return adjust_gamma(img_bnc, gamma_table[4])
 
-#------------------------------------------------------
-# Inter pupil distance
-#------------------------------------------------------
-#def ipd_img(cam_img, img_pos, h, w, crop_size, ipd):
-#  center_w = w // 2
-#  if img_pos == 'left':
-#    center_w = center_w - ipd 
-#    cam_img = cam_img[int( center_w - crop_size // 2):int( center_w + crop_size // 2), int(h // 2 - crop_size // 2):int(h // 2 + crop_size // 2)]
-#  if img_pos == 'right':
-#    center_w = center_w + ipd
-#    cam_img = cam_img[int( center_w - crop_size // 2):int( center_w + crop_size // 2), int(h // 2 - crop_size // 2):int(h // 2 + crop_size // 2)]
-#  return cam_img   
+#*****************************************************************************Need to improve with cuda
 
+def gamma_table(gamma):
+  gamma_table = []
+  for k in range(len(gamma)):
+    invGamma = 1.0 / gamma[k]
+    table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+    gamma_table.append(table)
+  return gamma_table
+
+def adjust_gamma(cam_img, table):
+	return cv.LUT(cam_img, table)
+
+#******************************************************************************Need to improve with cuda
+def noise_reduction(cam_img, diameter=3, sigmaColor=21, sigmaSpace=5):
+  return cv.bilateralFilter(cam_img, diameter, sigmaColor, sigmaSpace) 
 
 #------------------------------------------------------
 # Image edge highlight
@@ -257,7 +242,7 @@ def apply_brightness_contrast(cam_img, brightness = 0, contrast = 0):
 # def edge_image(cam_img):
 def edge_image(cam_img):
   edge_img = cv.cvtColor(cam_img, cv.COLOR_BGR2GRAY)
-  edge_img = apply_brightness_contrast(edge_img,0,32)
+  edge_img = apply_brightness_contrast(edge_img,0,32,gamma_table)
   edge_img = cv.GaussianBlur(edge_img,(3,3),0)
   edge_img = cv.Canny(edge_img,80,200)
   edge_img = cv.cvtColor(edge_img, cv.COLOR_GRAY2BGR)
@@ -267,7 +252,8 @@ def edge_image(cam_img):
 # Bubble magnification
 #------------------------------------------------------
 
-def bubble(cam_img, radius = 0.8, scale =0.6, amount =0.8):#for sin fn
+#****************************************************************************CHECK--break function--one to generate map, one to remap
+def bubble_map(cam_img, radius = 0.8, scale =0.6, amount =0.8):#for sin fn
 #def bubble(cam_img, radius = 0.4, scale =0.4, amount =0.8):#for sin fn
   # grab the dimensions of the image
   h, w = cam_img.shape[:2]
@@ -297,6 +283,17 @@ def bubble(cam_img, radius = 0.8, scale =0.6, amount =0.8):#for sin fn
                   #factor = math.pow( math.sqrt(distance) / radius , amount)
               flex_x[y, x] = factor * delta_x / scale + center_x
               flex_y[y, x] = factor * delta_y / scale + center_y
+  
+  # change maps to CUDA maps <----------------
+  #flex_x = cv.cuda_GpuMat(flex_x )
+  #flex_y = cv.cuda_GpuMat(flex_y)
+
+  return flex_x, flex_y
+
+def bubble(cam_img, flex_x, flex_y):#for sin fn
+
+  # grab the dimensions of the image
+  h, w = cam_img.shape[:2]
 
   cam_img = cv.line(cam_img, (int(0.5 * w), int(0.3*h)), (int(0.5 * w), int(0.4*h)), (255, 0, 0), 2)
   cam_img = cv.line(cam_img, (int(0.5 * w), int(0.6*h)), (int(0.5 * w), int(0.7*h)), (255, 0, 0), 2)
@@ -308,38 +305,27 @@ def bubble(cam_img, radius = 0.8, scale =0.6, amount =0.8):#for sin fn
   cam_img = cv.line(cam_img, (int(0.47 * w), int(0.3*h)), (int(0.47 * w), int(0.7*h)), (255, 255, 0), 1)
   cam_img = cv.line(cam_img, (int(0.53 * h), int(0.3*h)), (int(0.53 * w), int(0.7*h)), (255, 255, 0), 1)
 
-  # do the remap  this is where the magic happens
-  # opencv gpu
-  flex_x_cuda = cv.cuda_GpuMat(flex_x)
-  flex_y_cuda = cv.cuda_GpuMat(flex_y) 
-  cam_img_cuda = cv.cuda_GpuMat()
-  cam_img_cuda.upload(cam_img)
-
-  dst = cv.cuda.remap(cam_img_cuda, flex_x_cuda, flex_y_cuda, cv.INTER_LINEAR)
-  cam_img = dst.download() 
-  
-  return cam_img 
   #return cv.remap(cam_img, flex_x, flex_y, cv.INTER_LANCZOS4) 
-
-
+  return cv.remap(cam_img, flex_x, flex_y, cv.INTER_LINEAR) 
+  #return cv.cuda.remap(cam_img, flex_x, flex_y, cv.INTER_LINEAR)
 #------------------------------------------------------
 # OCR
 #------------------------------------------------------
 
 #def draw_boxes(image, bounds, color='blue', width=1):
 #    draw = ImageDraw.Draw(Image.fromarray(image))
-#    for bound in bounds:
+#      for bound in bounds:
 #        p0, p1, p2, p3 = bound[0]
 #        print(p0, p1 ,p2 ,p3)
 #        p21, p22 = np.array(p2)
 #        p31, p32 = np.array(p3)
 #        cv.line(image,(int(p21),int(p22)),(int(p31),int(p32)),(255,0,0),2)
-#    return image 
+#  return image 
 
 # *************888change with queues***********
 #def ocr_img(cam_img):
 #  bounds = reader.readtext(cam_img)
-#  #q.put('Process Done')
+  #q.put('Process Done')
 #  return bounds
   
 #------------------------------------------------------
@@ -356,7 +342,7 @@ def bw_img(cam_img):
 
 def bwhc_img(cam_img):
   cam_img = cv.cvtColor(cam_img, cv.COLOR_BGR2GRAY)
-  cam_img = apply_brightness_contrast(cam_img,10,32)
+  cam_img = apply_brightness_contrast(cam_img,10,32,gamma_table)
   ret,v = cv.threshold(cam_img,155,255,cv.THRESH_BINARY)
   return cv.cvtColor(v, cv.COLOR_GRAY2BGR)
 
@@ -366,7 +352,7 @@ def bwhc_img(cam_img):
 
 def wbhc_img(cam_img):
   cam_img = cv.cvtColor(cam_img, cv.COLOR_BGR2GRAY)
-  cam_img = apply_brightness_contrast(cam_img,10,32)
+  cam_img = apply_brightness_contrast(cam_img,10,32,gamma_table)
   ret,v = cv.threshold(cam_img,155,255,cv.THRESH_BINARY)
   v = cv.cvtColor(v, cv.COLOR_GRAY2BGR)
   return 255 - v  
@@ -375,14 +361,17 @@ def wbhc_img(cam_img):
 # Image overlaying
 #------------------------------------------------------
 
+#<--------------------------------------------------------------------cuda added
 def apply_img_overlay(cam_img, cam_img_src, scale_factor, pos):
   #Function to overlay windowed mini-image on input image
 
-  #h, w = cam_img.shape[:2]
   w ,h = cam_img.shape[:2]
-  #h_src, w_src = cam_img_src.shape[:2]
   w_src, h_src = cam_img_src.shape[:2]
+  
   overlay_img = cv.resize(cam_img_src,(int(w_src//scale_factor) , int(h_src//scale_factor)),interpolation = cv.INTER_LINEAR )
+  #overlay_img = cv.cuda.resize(cam_img_src,(int(w_src//scale_factor) , int(h_src//scale_factor)),interpolation = cv.INTER_LINEAR )
+  
+  overlay_img = img_border(overlay_img)
   overlay_h, overlay_w = overlay_img.shape[:2]
   if pos == 0:
     cam_img[ 0 : overlay_h , 0  : overlay_w ]= overlay_img
@@ -392,24 +381,25 @@ def apply_img_overlay(cam_img, cam_img_src, scale_factor, pos):
     cam_img[ h - overlay_h : h , w - overlay_w  : w ]= overlay_img
   else:
     cam_img[ 0 : overlay_h , w - overlay_w  : w ]= overlay_img
-  cam_img = img_border(cam_img)
   return cam_img
 
+#**********************************************************************************CHECK
 def apply_zoom_overlay(cam_img, overly_zoom_factor):
   #h = cam_img.shape[0]
   w = cam_img.shape[0]
   #w = cam_img.shape[1]
   h = cam_img.shape[1]
-  overlay_left = cam_img[  w -int(w * 0.3)  : w , int(h * 0.3) : int(h * 0.7) ]
+  #overlay_left = cam_img[  w -int(w * 0.3)  : w , int(h * 0.3) : int(h * 0.7) ]
+  overlay_left = cam_img[  0 : int(w * 0.3) , int(h * 0.4) : int(h * 0.6) ]
   overlay_left = zoom_image(overlay_left, overly_zoom_factor) 
   overlay_left = img_border(overlay_left)
   overlay_img = zoom_image(cam_img, overly_zoom_factor)
-  overlay_img = overlay_img[ 0  : w , int(h * 0.3) : int(h * 0.7) ]
+  overlay_img = overlay_img[ 0  : w , int(h * 0.4) : int(h * 0.6) ]
   overlay_img = img_border(overlay_img)
 
-
-  cam_img[ 0  : w ,int(h * 0.3) : int(h * 0.7)] = overlay_img
-  cam_img[ w -int(w * 0.3)  : w ,int(h * 0.3) : int(h * 0.7)] = overlay_left
+  cam_img[ 0  : w ,int(h * 0.4) : int(h * 0.6)] = overlay_img
+  #cam_img[ w -int(w * 0.3)  : w ,int(h * 0.4) : int(h * 0.6)] = overlay_left
+  cam_img[ 0 : int(w * 0.3) , int(h * 0.4) : int(h * 0.6)] = overlay_left
   return cam_img
 
 
@@ -418,77 +408,78 @@ def img_border(cam_img):
   row, col = cam_img.shape[:2]
   cam_img = cv.rectangle(cam_img,(0,0),(col,row),(255,255,255),3) # really thick white rectangle
   
-  #bottom = cam_img[row-2:row, 0:col]
-  #mean = cv.mean(bottom)[0]
-
-  #bordersize = 2
-  #border = cv.copyMakeBorder(
-  #  cam_img,
-  #  top=bordersize,
-  #  bottom=bordersize,
-  #  left=bordersize,
-  #  right=bordersize,
-  #  borderType=cv.BORDER_CONSTANT,
-  #  value=[mean, mean, mean]
-  #)
   return cam_img
 
 #+++++++++++++++++++++++++*********************************************************************************
 #**********************************************************************************************************
-def process_main(cam_img,cam_img_src, mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos ):
+def process_main(cam_img,cam_img_src, mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos, flex_x, flex_y ):
     
+  #cam_img = noise_reduction(cam_img)
+
   # Scenic mode
   if mode_select == 0:
     mode_name = 'Scenic'
 
-    if scenic_select == 1:# Edge mode
+    if scenic_select == 1:# No glare mode
+      sub_mode = 'Noglare' 
+      cam_img = remove_image_glare(cam_img)
+    
+    if scenic_select == 2:# Edge mode
       sub_mode = 'Edge'
       cam_img = edge_image(cam_img)
-      cam_img = zoom_image(cam_img,zoom_factor)
       
-
-    elif scenic_select == 2:#bubble mode
-      sub_mode = 'bubble'
-      cam_img = bubble(cam_img)
-    
     else:
       sub_mode = 'Normal' 
-      cam_img = zoom_image(cam_img,zoom_factor)
+
+    cam_img = zoom_image(cam_img,zoom_factor)
   
-  # Reading mode - 1
+  # Reading mode - 1 -> Image with small window overlay
   elif mode_select == 1:
     mode_name = 'Reading1'
-    #img_pair = [camera_A, camera_B]
-    #box_line = pool.map(ocr_img, img_pair)
 
     if reading_select == 1:#BW mode
       sub_mode = 'BW'
       cam_img = bw_img(cam_img)
-      cam_img = zoom_image(cam_img,zoom_factor)
 
     elif reading_select == 2:#BWHC mode
       sub_mode = 'BWHC'
       cam_img = bwhc_img(cam_img)
-      cam_img = zoom_image(cam_img,zoom_factor)
 
     elif reading_select == 3:#WBHC mode
       sub_mode = 'WBHC'
       cam_img = wbhc_img(cam_img)
-      camera_B = zoom_image(cam_img,zoom_factor)
 
     else:
       sub_mode = 'Normal'
-      cam_img = zoom_image(cam_img,zoom_factor)
 
+    cam_img = zoom_image(cam_img,zoom_factor)
     cam_img = apply_img_overlay(cam_img, cam_img_src , overlay_scale, pos)
   
-  # Reading mode - 2
+  # Reading mode - 2 -> Image with center window overlay
   elif mode_select == 2:
     mode_name = 'Reading2'
 
-    cam_img = bubble(cam_img)
+    if reading_select == 1:#BW mode
+      sub_mode = 'BW'
+      cam_img = bw_img(cam_img)
 
+    elif reading_select == 2:#BWHC mode
+      sub_mode = 'BWHC'
+      cam_img = bwhc_img(cam_img)
+
+    elif reading_select == 3:#WBHC mode
+      sub_mode = 'WBHC'
+      cam_img = wbhc_img(cam_img)
+
+    else:
+      sub_mode = 'Normal'
     
+    cam_img = apply_zoom_overlay(cam_img, overly_zoom_factor)
+    
+  # Reading mode - 3 -> Image with bubble magnification
+  elif mode_select == 3:
+    mode_name = 'Reading3'
+
     if reading_select == 1:#BW mode
       sub_mode = 'BW'
       cam_img = bw_img(cam_img)
@@ -504,9 +495,11 @@ def process_main(cam_img,cam_img_src, mode_select,scenic_select,reading_select,s
 
     else:
       sub_mode = 'Normal' 
+    
+    cam_img = bubble(cam_img, flex_x, flex_y)
 
   # Setting mode
-  elif mode_select == 3:
+  elif mode_select == 4  :
     mode_name = 'Setting'
 
     if setting_select == 0:#Brightness mode
@@ -524,7 +517,6 @@ def process_main(cam_img,cam_img_src, mode_select,scenic_select,reading_select,s
     else: #Primary eye
       sub_mode = 'Primary eye'
       
-  
   else:
     mode_select = 0
   
@@ -601,27 +593,30 @@ def puttext_img(cam_img, frame_h, frame_w, mode_name, sub_mode, fps, zoom_factor
   if mode_name == 'Reading2':
     text_img = draw_border(text_img, (int(frame_w * 0.1),int(frame_h * 0.1)), (int(frame_w * 0.1),int(frame_h * 0.9)), (int(frame_w * 0.9),int(frame_h * 0.1)), (int(frame_w * 0.9),int(frame_h * 0.9)), int(frame_w * 0.05), 'corner')
   
+  if mode_name == 'Reading3':
+    text_img = draw_border(text_img, (int(frame_w * 0.1),int(frame_h * 0.1)), (int(frame_w * 0.1),int(frame_h * 0.9)), (int(frame_w * 0.9),int(frame_h * 0.1)), (int(frame_w * 0.9),int(frame_h * 0.9)), int(frame_w * 0.05), 'corner')
+  
   if mode_name == 'Setting':
     if sub_mode == 'Brightness':
-      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.64)),(0,0,0),-1)
+      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.66)),(0,0,0),-1)
       text_img = cv.putText(text_img,'Brightness:' + str(brightness),(int(frame_w * 0.4),int(frame_h * 0.48)),font,1,(0,255,255),3,cv.LINE_AA)      
       text_img = cv.putText(text_img,'Brightness:' + str(brightness),(int(frame_w * 0.4),int(frame_h * 0.48)),font,1,(255,0,0),2,cv.LINE_AA)      
     if sub_mode == 'Contrast':
-      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.60)),(0,0,0),-1)
+      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.62)),(0,0,0),-1)
       text_img = cv.putText(text_img,'Contrast:' + str(contrast),(int(frame_w * 0.4),int(frame_h * 0.48)),font,1,(255,255,0),3,cv.LINE_AA)
       text_img = cv.putText(text_img,'Contrast:' + str(contrast),(int(frame_w * 0.4),int(frame_h * 0.48)),font,1,(0,0,255),2,cv.LINE_AA)
     if sub_mode == 'IPD':
-      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.48)),(int(frame_w * 0.55),int(frame_h * 0.52)),(0,0,0),-1)
+      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.48)),(int(frame_w * 0.55),int(frame_h * 0.59)),(0,0,0),-1)
       text_img = cv.putText(text_img,'IPD:' + str(ipd),(int(frame_w * 0.48),int(frame_h * 0.48)),font,1,(255,255,0),3,cv.LINE_AA)
       text_img = cv.putText(text_img,'IPD:' + str(ipd),(int(frame_w * 0.48),int(frame_h * 0.48)),font,1,(0,0,255),2,cv.LINE_AA)
     if sub_mode == 'Display mode':
-      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.60)),(0,0,0),-1)
-      text_img = cv.putText(text_img,'Display mode:' + display_mode_name,(int(frame_w * 0.48),int(frame_h * 0.48)),font,1,(255,255,0),3,cv.LINE_AA)
-      text_img = cv.putText(text_img,'Display mode:' + display_mode_name,(int(frame_w * 0.48),int(frame_h * 0.48)),font,1,(0,0,255),2,cv.LINE_AA)
+      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.82)),(0,0,0),-1)
+      text_img = cv.putText(text_img,'Display mode: ' + display_mode_name,(int(frame_w * 0.40),int(frame_h * 0.48)),font,1,(255,255,0),3,cv.LINE_AA)
+      text_img = cv.putText(text_img,'Display mode: ' + display_mode_name,(int(frame_w * 0.40),int(frame_h * 0.48)),font,1,(0,0,255),2,cv.LINE_AA)
     if sub_mode == 'Primary eye':
-      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.60)),(0,0,0),-1)
-      text_img = cv.putText(text_img,'Primary eye:' + primary_eye,(int(frame_w * 0.48),int(frame_h * 0.48)),font,1,(255,255,0),3,cv.LINE_AA)
-      text_img = cv.putText(text_img,'Primary eye:' + primary_eye,(int(frame_w * 0.48),int(frame_h * 0.48)),font,1,(0,0,255),2,cv.LINE_AA)
+      cam_img = cv.rectangle(cam_img,(int(frame_w * 0.51),int(frame_h * 0.40)),(int(frame_w * 0.55),int(frame_h * 0.70)),(0,0,0),-1)
+      text_img = cv.putText(text_img,'Primary eye: ' + primary_eye,(int(frame_w * 0.40),int(frame_h * 0.48)),font,1,(255,255,0),3,cv.LINE_AA)
+      text_img = cv.putText(text_img,'Primary eye: ' + primary_eye,(int(frame_w * 0.40),int(frame_h * 0.48)),font,1,(0,0,255),2,cv.LINE_AA)
   text_img = cv.rotate(text_img, cv.ROTATE_90_CLOCKWISE)
   cam_img = cv.addWeighted(cam_img, 1, text_img, 3 ,0)
   return  cam_img
@@ -646,7 +641,7 @@ def apply_radial_distortion(cam_img, camera_mtx, distortion_mtx):
 
 frame_count = 0
 # Settings defaults
-contrast = 50
+contrast = 20
 brightness = 50
 ipd = 5
 zoom_factor = 1.0
@@ -665,21 +660,28 @@ mtx = np.array([[ 1.70000000e+06, 0.00000000e+00, 0.00000000e+00 ],[ 0.00000000e
 dist = np.array([[ 1.70000000e+06 , 1.00000000e+05 , 0.00000000e+00, 0.00000000e+00, 1.00000000e+04 ]])
 pos = 3
 
-#eyebox_w = 1000 * 0.5
-#eyebox_h = 1000 * 0.5
+# bubble mapping parameters
+flex_x = []
+flex_y = []
+
+# gamma adjustment parameters
+gamma = [0.8, 0.9, 1.0, 1.1, 1.2]
+ganna_table = []
+
 eyebox_w = 900 
 eyebox_h = 900 
 
-display_mode = 1
+display_mode = 0
 primary_eye = 'right'
 
+first_run = True
 
 if __name__ == '__main__':
 
   video_stream_widget = VideoStreamWidget(camSet)
 
-  mp.set_start_method('spawn')
-  pool = mp.Pool(4)
+  #mp.set_start_method('spawn')
+  #pool = mp.Pool(2)
   
   button = Button(but_pin_19,but_pin_15,but_pin_13,but_pin_21,but_pin_23)
   #button_plus = Button(but_pin_13)
@@ -687,16 +689,22 @@ if __name__ == '__main__':
   #button_mode = Button(but_pin_19) 
   #button_submode = Button(but_pin_15) 
   #button_shutdown = Button(but_pin_23) 
+  gamma_table = gamma_table(gamma)
 
   while True:
 
     start = time.time()
-    #status, vid_frame = capture.read()
     vid_frame = video_stream_widget.frame
     frame_h, frame_w = vid_frame.shape[:2]
 
-    #-----------------------------------------Pre-Processing---------------------------------------
+    #-----------------------------------------Pre-Processing and Processing------------------------------------
     split_len = frame_h//2
+    #extract src image for overlay
+    # calculate remap values for bubble distortion 
+    
+    #*****++**********+++++++++++++++************change first********************************
+    
+    #*********************+++++++++++++++++**+++++change firt+++++++++++++*+++++++++++++++++++++
     
     if display_mode  == 1:
       display_mode_name = 'binocular'    
@@ -709,7 +717,26 @@ if __name__ == '__main__':
       camera_B = vid_frame[ split_len : , : ]#left image
       camera_B = cv.flip(camera_B, -1)# flips image about both vertical and horizontal axis
       camera_B_h, camera_B_w = camera_B.shape[:2]
-    
+      
+      # call remap function for bubble
+      if first_run:
+        flex_x , flex_y = bubble_map(camera_A)
+        first_run = False
+
+      # adjust gamma
+      #camera_A = adjust_gamma(camera_A)
+      #camera_B = adjust_gamma(camera_B)
+
+      # Brightness and contrast functions
+      camera_A = apply_brightness_contrast(camera_A,brightness,contrast, gamma_table)
+      camera_B = apply_brightness_contrast(camera_B,brightness,contrast, gamma_table)
+
+      camera_A_src = camera_A
+      camera_B_src = camera_B
+
+      camera_A, mode_name, sub_mode = process_main(camera_A,camera_A_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos, flex_x , flex_y)
+      camera_B, mode_name, sub_mode = process_main(camera_B,camera_B_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos, flex_x , flex_y)
+
     else:
       display_mode_name = 'biocular' 
       if primary_eye == 'right':
@@ -717,18 +744,46 @@ if __name__ == '__main__':
         camera_A = vid_frame[ : split_len , : ]#right image
         camera_A = cv.flip(camera_A, -1)# flips image about both vertical and horizontal axis
         camera_A_h, camera_A_w = camera_A.shape[:2]
+        
+        # call remap function for bubble
+        if first_run:
+          flex_x , flex_y = bubble_map(camera_A)
+          first_run = False
+        
+        # noise reduction, gamma correction, brightness and contrast adjustment
+        #camera_A = noise_reduction(camera_A)
+        #camera_A = adjust_gamma(camera_A)
+        camera_A = apply_brightness_contrast(camera_A,brightness,contrast, gamma_table)
+
+        camera_A_src = camera_A
+        camera_A, mode_name, sub_mode = process_main(camera_A,camera_A_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos, flex_x , flex_y)
+        
         # left image
-        camera_B = vid_frame[ : split_len , : ]#left image
-        camera_B = cv.flip(camera_B, -1)# flips image about both vertical and horizontal axis
+        camera_B = camera_A
+        camera_B_src = camera_B
         camera_B_h, camera_B_w = camera_B.shape[:2]
+
       else:
-        camera_A = vid_frame[ split_len : , : ]#right image
-        camera_A = cv.flip(camera_A, -1)# flips image about both vertical and horizontal axis
-        camera_A_h, camera_A_w = camera_A.shape[:2]
         # left image
         camera_B = vid_frame[ split_len : , : ]#left image
         camera_B = cv.flip(camera_B, -1)# flips image about both vertical and horizontal axis
         camera_B_h, camera_B_w = camera_B.shape[:2]
+
+        # call remap function for bubble
+        if first_run:
+          flex_x , flex_y = bubble_map(camera_B)
+          first_run = False
+        
+        #camera_B = adjust_gamma(camera_B)
+        camera_B = apply_brightness_contrast(camera_B,brightness,contrast, gamma_table)
+        
+        camera_B_src = camera_B
+        camera_B, mode_name, sub_mode = process_main(camera_B,camera_B_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos, flex_x , flex_y)
+        
+        # right image
+        camera_A = camera_B
+        camera_A_src = camera_A
+        camera_A_h, camera_A_w = camera_A.shape[:2]
 
     # introduce ipd to right image
     if ( eyebox_h//2 + ipd ) <= camera_A_h//2 :
@@ -745,34 +800,21 @@ if __name__ == '__main__':
       midw_B = (int(camera_B_w//2), int(camera_B_h//2 - ( camera_B_w//2 - eyebox_w//2 )))
     camera_B = camera_B[ midw_B[1] - int(eyebox_h//2) : midw_B[1] + int(eyebox_h//2) , midw_B[0] - int(eyebox_w//2) : midw_B[0] + int(eyebox_w//2)]
     
-    #extract src image for overlay
-    camera_A_src = camera_A
-    camera_B_src = camera_B
-
 
     # remove glare from image
-    camera_A = remove_image_glare(camera_A)
-    camera_B = remove_image_glare(camera_B)
-
-    # Brightness and contrast functions
-    camera_A = apply_brightness_contrast(camera_A,brightness,contrast)
-    camera_B = apply_brightness_contrast(camera_B,brightness,contrast)
-
-    # create function to introduce IPD and vary values
-    #img_pos_A = 'left'
-    #img_pos_B = 'right'
+    #camera_A = remove_image_glare(camera_A)
+    #camera_B = remove_image_glare(camera_B)
 
 #-----------------------------------------Modes------------------------------------------------
-    #(cam_img,cam_img_src, mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos )
-    data_pair = [(camera_A,camera_A_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos), (camera_B,camera_B_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos)]
-    process_op = pool.starmap(process_main, data_pair)
-    process_op_A = process_op[0] # process result for camera_A
-    process_op_B = process_op[1] # process result for camera_B
+    #data_pair = [(camera_A,camera_A_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos), (camera_B,camera_B_src,mode_select,scenic_select,reading_select,setting_select,zoom_factor,overlay_scale, pos)]
+    #process_op = pool.starmap(process_main, data_pair)
+    #process_op_A = process_op[0] # process result for camera_A
+    #process_op_B = process_op[1] # process result for camera_B
     
-    camera_A = process_op_A[0] 
-    camera_B = process_op_B[0]
-    mode_name = process_op_A[1]
-    sub_mode = process_op_A[2]
+    #camera_A = process_op_A[0] 
+    #camera_B = process_op_B[0]
+    #mode_name = process_op_A[1]
+    #sub_mode = process_op_A[2]
     
 #-----------------------------------------Post-Processing--------------------------------------    
         
@@ -782,6 +824,8 @@ if __name__ == '__main__':
     fps = 1 // time_elapsed
 
     # Display status texts    
+    camera_A = img_border(camera_A)
+    camera_B = img_border(camera_B)
     frame_A_h, frame_A_w = camera_A.shape[:2]
     frame_B_h, frame_B_w = camera_B.shape[:2]
     camera_A = puttext_img(camera_A, frame_A_h, frame_A_w, mode_name, sub_mode, fps, zoom_factor, brightness, contrast, ipd)
@@ -798,85 +842,67 @@ if __name__ == '__main__':
     fill_B  [ 5 : int(eyebox_h + 5) , int(camera_B_w//2 - int(eyebox_w//2)) : int(camera_B_w//2 + int(eyebox_w//2)) ] = camera_B
    
     new_frame = np.concatenate((fill_A,fill_B),axis=0)
+    #new_frame = np.concatenate((camera_A,camera_B),axis=0)
 
     #-------------------------------------------User Input-----------------------------------------    
-    #button_plus = GPIO.input(but_pin_13)
-    #button_minus = GPIO.input(but_pin_21) 
-    #button_mode = GPIO.input(but_pin_19) 
-    #button_submode = GPIO.input(but_pin_15) 
-    #button_shutdown = GPIO.input(but_pin_23) 
-  
-    cv.imshow('frame', new_frame)
-    key = cv.waitKey(1)
-    time.sleep(0.2)
-    
-    #if key == ord('q'):       
-    #  pool.close()
-    #  pool.join()
-    #  button.gpio_close(key)
-      #button_plus.gpio_close()
-      #button_minus.gpio_close()+ -
-      #button_mode.gpio_close()
-      #button_submode.gpio_close()
-      #button_shutdown.gpio_close()
-    #video_stream_widget.show_frame(new_frame,key)
 
-    #if button_shutdown.pressed:  
+    #winname = "digieye"
+    #cv.namedWindow(winname)        # Create a named window
+    #cv.moveWindow(winname, 0,0)    # Move it to (0,0)
+    #cv.imshow(winname, new_frame)
+    
+    key = cv.waitKey(1)
+    time.sleep(0.05)
+    
+    if key == ord('q'):
+      pool.close()
+      pool.join()
+    video_stream_widget.show_frame(new_frame,key)
+
     if button.pressed_shutdown:        
       pool.close()
       pool.join()
       key = 1
     video_stream_widget.show_frame(new_frame,key)
     
-    #if button_shutdown == 1 :       
-    #  pool.close()
-    #  pool.join()
-    #video_stream_widget.show_frame(new_frame,button_shutdown)
-
-
-    #if button_mode == 0 :#mode change:--> Scenic, Reading, Setting
-    #if button_mode.pressed:#mode change:--> Scenic, Reading, Setting
-    if button.pressed_mode:#mode change:--> Scenic, Reading, Setting
-      #print('Pressed mode:', mode_select)
-      if mode_select == 3:
+    if button.pressed_mode:#mode change:--> Scenic, Reading1, Reading2, Reading3, Setting
+      if mode_select == 4:
         mode_select = 0
       else:  
         mode_select +=1 
-    #if button_submode.pressed:
+
     if button.pressed_submode:
-      if mode_select == 0:#scenic mode change:--> Normal, Edge, Bubble
+      if mode_select == 0:#scenic mode change:--> Normal, Noglare, Edge
         setting_select = 0
-        #print('Pressed submode:', scenic_select)
         if scenic_select == 3: 
           scenic_select = 0
         else:  
           scenic_select +=1 
       if mode_select == 1:#reading mode 1 change:--> Normal, BW, BWHC, WBHC
         scenic_select = 0
-        #print('Pressed submode:', reading_select)
         if reading_select == 4: 
           reading_select = 0
         else:  
           reading_select +=1 
       if mode_select == 2:#reading mode 2 change:--> Normal, BW, BWHC, WBHC
-        #reading_select = 0
-        #print('Pressed submode:', reading_select)
         if reading_select == 4: 
           reading_select = 0
         else:  
           reading_select +=1 
-      if mode_select == 3:#setting mode change:--> Brightness, Contrast, ipd, display mode, primary eye
+      if mode_select == 3:#reading mode 3 change:--> Normal, BW, BWHC, WBHC
+        if reading_select == 4: 
+          reading_select = 0
+        else:  
+          reading_select +=1 
+      if mode_select == 4:#setting mode change:--> Brightness, Contrast, ipd, display mode, primary eye
         reading_select = 0
-        #print('Pressed submode:', setting_select)
         if setting_select == 5: 
           setting_select = 0
         else:  
           setting_select +=1 
     
-    #if button_plus.pressed:
     if button.pressed_plus:
-      #print('Pressed plus')
-      if mode_select == 3:
+      if mode_select == 4:
         if setting_select == 0:
           if brightness < 100: 
             brightness+=1
@@ -910,10 +936,8 @@ if __name__ == '__main__':
         else:  
           zoom_factor = zoom_factor + 0.2
 
-    #if button_minus.pressed:
     if button.pressed_minus:
-      #print('Pressed submode:')
-      if mode_select == 3:
+      if mode_select == 4:
         if setting_select == 0:
           if brightness > 0: 
             brightness-=1
