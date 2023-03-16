@@ -20,13 +20,8 @@ radius = int(1.8*h)
 #radius_y = int(0.5*h)
 scale_x = 2      # smaller scale number, higher magnification 0.6,0.9
 scale_y = 2
-<<<<<<< HEAD
-amount_x = 4    # higher amount(power), higher rate of magnification 6,6
-amount_y = 4
-=======
 amount_x = 0.5    # higher amount(power), higher rate of magnification 6,6
 amount_y = 0.5
->>>>>>> 8dfcbfe (initial commit)
 shift = 0.5
 
 factor_x = 1.0

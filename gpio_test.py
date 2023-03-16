@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 #!/usr/bin/env python3
+=======
+#!/usr/bin/env python
+>>>>>>> 8dfcbfe (initial commit)
 
  
 #taken from Jetson.GPIO github examples
@@ -17,10 +21,17 @@ import os
 # Pin Definitons: 13, 15,19,21,23 - new pin list
 #led_pin = 12  # Board pin 12
 but_pin_13 = 13  # Board pin 13
+<<<<<<< HEAD
 but_pin_15= 15  # Board pin 15
 but_pin_19 = 19  # Board pin 19
 but_pin_21 = 21  # Board pin 21
 but_pin_23 = 23  # Board pin 23
+=======
+but_pin_15 = 15  # Board pin 15
+but_pin_19 = 19  # Board pin 1119
+but_pin_19 = 21
+but_pin_19 = 23
+>>>>>>> 8dfcbfe (initial commit)
 
 
 def main():
@@ -32,6 +43,10 @@ def main():
     GPIO.setup(but_pin_19, GPIO.IN)  # button pin set as input
     GPIO.setup(but_pin_21, GPIO.IN)  # button pin set as input
     GPIO.setup(but_pin_23, GPIO.IN)  # button pin set as input
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8dfcbfe (initial commit)
     # Initial state for LEDs:
     #GPIO.output(led_pin, GPIO.LOW)
     prev_value = None
@@ -44,6 +59,7 @@ def main():
         while True:
 
             button_plus = GPIO.input(but_pin_13)
+<<<<<<< HEAD
             button_minus = GPIO.input(but_pin_21) 
             button_mode = GPIO.input(but_pin_19) 
             button_submode = GPIO.input(but_pin_15) 
@@ -64,6 +80,27 @@ def main():
                 print("SHUTDOWN INITIATED")
                 time.sleep(0.2)
 
+=======
+            button_minus = GPIO.input(but_pin_15) 
+            button_mode = GPIO.input(but_pin_19) 
+            button_submode = GPIO.input(but_pin_21) 
+            button_shutdown = GPIO.input(but_pin_23) 
+            
+            if
+             button_plus == 0 :
+                print(" (+) Pressed!") 
+            if button_minus == 0 :
+                print(" (-) Pressed!") 
+            if button_mode == 0 :
+                print(" (M) Pressed!") 
+            if button_submode == 0 :
+                print(" (M) Pressed!") 
+            if button_shutdown == 1 :
+                print(" (P) Pressed!") 
+                print("Shutdown initiated")
+                time.sleep(2)
+                print("SYSTEM SHUTDOWN")
+>>>>>>> 8dfcbfe (initial commit)
                 break
             time.sleep(0.2)
     finally:
@@ -75,5 +112,9 @@ if __name__ == '__main__':
     #os.system('shutdown /s /t 1') #error:Failed to parse time specification: /s
     print("Shutting down")
     time.sleep(1)
+<<<<<<< HEAD
     #os.system('shutdown -h now')
     exit()
+=======
+    os.system('shutdown -h now')
+>>>>>>> 8dfcbfe (initial commit)

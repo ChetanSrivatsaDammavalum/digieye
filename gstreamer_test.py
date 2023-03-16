@@ -7,13 +7,21 @@ import multiprocessing as mp
 import math
 
 
+<<<<<<< HEAD
 flip=1
+=======
+flip=3
+>>>>>>> 8dfcbfe (initial commit)
 #dispW=int(1080 * 0.5) 
 #dispH=int(2160 * 0.5)
 dispW=1080  
 dispH=2160 
 camSet='nvarguscamerasrc ! video/x-raw(memory:NVMM), width=3264, height=2464, format=NV12, framerate=21/1 ! nvvidconv flip-method='+str(flip)+' ! video/x-raw, width='+str(dispW)+', height='+str(dispH)+', format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink'
+<<<<<<< HEAD
 capture = cv.VideoCapture(camSet, cv.CAP_GSTREAMER)
+=======
+capture = cv.VideoCapture(camSet)
+>>>>>>> 8dfcbfe (initial commit)
 
 font = cv.FONT_HERSHEY_SIMPLEX
 
@@ -319,7 +327,11 @@ def puttext_img(cam_img, frame_h, frame_w, mode_name, sub_mode, fps, zoom_factor
     if sub_mode == 'IPD':
       text_img = cv.rectangle(text_img,(int(frame_w * 0.3),int(frame_h * 0.7)),(int(frame_w * 0.6),int(frame_h * 0.6)),(0,255,255),-1)
       text_img = cv.putText(text_img,'IPD:' + str(ipd),(int(frame_w * 0.3),int(frame_h * 0.7)),font,1,(0,0,255),1,cv.LINE_AA)
+<<<<<<< HEAD
   text_img = cv.rotate(text_img, cv.ROTATE_90_CLOCKWISE)
+=======
+  text_img = cv.rotate(text_img, cv.ROTATE_90_COUNTERCLOCKWISE)
+>>>>>>> 8dfcbfe (initial commit)
   cam_img = cv.addWeighted(cam_img, 0.8, text_img, 1.5 ,1)
   return  cam_img
 #------------------------------------------------------
@@ -381,6 +393,7 @@ if __name__ == '__main__':
     #-----------------------------------------Pre-Processing---------------------------------------    
     split_len = frame_h//2
     # right image
+<<<<<<< HEAD
     camera_B = frame[ : split_len , : ]#right image
     camera_B = cv.flip(camera_B, -1)# flips image about both vertical and horizontal axis
     camera_B_h, camera_B_w = camera_B.shape[:2]
@@ -402,6 +415,29 @@ if __name__ == '__main__':
       midw_A = (int(camera_A_w//2), int(camera_A_h//2 - ( camera_A_w//2 - eyebox_w//2 )))
     camera_A = camera_A[ midw_A[1] - int(eyebox_h//2) : midw_A[1] + int(eyebox_h//2) , midw_A[0] - int(eyebox_w//2) : midw_A[0] + int(eyebox_w//2)]
     
+=======
+    camera_A = frame[ : split_len , : ]#right image
+    camera_A = cv.flip(camera_A, -1)# flips image about both vertical and horizontal axis
+    camera_A_h, camera_A_w = camera_A.shape[:2]
+    # introduce ipd to right image
+    if ( eyebox_h//2 + ipd ) <= camera_A_h//2 :
+      midw_A = (int(camera_A_w//2), int(camera_A_h//2 + ipd ))
+    else:
+      midw_A = (int(camera_A_w//2), int(camera_A_h//2 + ( camera_A_w//2 - eyebox_w//2 )))
+    camera_A = camera_A[ midw_A[1] - int(eyebox_h//2) : midw_A[1] + int(eyebox_h//2) , midw_A[0] - int(eyebox_w//2) : midw_A[0] + int(eyebox_w//2)]
+    
+    # left image
+    camera_B = frame[ split_len : , : ]#left image
+    camera_B = cv.flip(camera_B, -1)# flips image about both vertical and horizontal axis
+    camera_B_h, camera_B_w = camera_B.shape[:2]
+    # introduce ipd to left image
+    if ( eyebox_h//2 + ipd ) <= camera_B_w//2 :
+      midw_B = (int(camera_B_w//2), int(camera_B_h//2 - ipd ))
+    else:
+      midw_B = (int(camera_B_w//2), int(camera_B_h//2 - ( camera_B_w//2 - eyebox_w//2 )))
+    camera_B = camera_B[ midw_B[1] - int(eyebox_h//2) : midw_B[1] + int(eyebox_h//2) , midw_B[0] - int(eyebox_w//2) : midw_B[0] + int(eyebox_w//2)]
+    
+>>>>>>> 8dfcbfe (initial commit)
     #extract src image for overlay
     camera_A_src = camera_A
     camera_B_src = camera_B
@@ -562,11 +598,15 @@ if __name__ == '__main__':
     new_frame = np.concatenate((fill_A,fill_B),axis=0)
 
     #-------------------------------------------User Input-----------------------------------------    
+<<<<<<< HEAD
     # position window to 0,0 and show windowed image
     winname = 'frame'
     cv.namedWindow(winname)
     cv.moveWindow(winname,0,0)
     cv.imshow(winname, new_frame)
+=======
+    cv.imshow('frame', new_frame)
+>>>>>>> 8dfcbfe (initial commit)
     key = cv.waitKey(1)
     if key==ord('x'):#mode change:--> Scenic, Reading, Setting
         if mode_select == 3:
